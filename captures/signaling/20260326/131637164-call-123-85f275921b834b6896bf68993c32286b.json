@@ -1,0 +1,1 @@
+{"id":"notification-1","changeType":"updated","tenantId":"tenant-1","resource":"/communications/calls/call-123","resourceData":{"id":"call-123","state":"established","requestedModalities":["audio","video"]}}

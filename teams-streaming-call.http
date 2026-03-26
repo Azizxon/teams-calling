@@ -1,0 +1,6 @@
+@teams_streaming_call_HostAddress = http://localhost:5164
+
+GET {{teams_streaming_call_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
