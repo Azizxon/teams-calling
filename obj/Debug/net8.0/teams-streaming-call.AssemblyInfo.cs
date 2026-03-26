@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("teams-streaming-call")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+679384f837ba1d6ffc4e07b4516d4126180e6666")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
 [assembly: System.Reflection.AssemblyProductAttribute("teams-streaming-call")]
 [assembly: System.Reflection.AssemblyTitleAttribute("teams-streaming-call")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
