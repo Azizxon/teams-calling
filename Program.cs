@@ -22,11 +22,4 @@ var app = builder.Build();
 app.UseAuthorization();
 app.MapControllers();
 
-app.MapGet("/", () => Results.Ok(new
-{
-	service = "teams-streaming-call",
-	endpoint = "/api/calls",
-	description = "Receives Microsoft Graph call notifications and prepares media capture orchestration.",
-}));
-
 app.Run();
