@@ -22,6 +22,12 @@ public sealed class TeamsCallBotOptions
     [Required]
     public string ServiceDnsName { get; set; } = string.Empty;
 
+    /// <summary>
+    /// Public IPv4 of this Windows VM used by the media platform.
+    /// If empty, the app will try to resolve ServiceDnsName or MediaServiceFqdn.
+    /// </summary>
+    public string InstancePublicIpAddress { get; set; } = string.Empty;
+
     public string CertificateThumbprint { get; set; } = string.Empty;
 
     [Range(1, 65535)]
