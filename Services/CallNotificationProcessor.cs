@@ -39,12 +39,13 @@ public sealed class CallNotificationProcessor : ICallNotificationProcessor
 
             if (IsIncoming(notification.CallState))
             {
-                // Step 1: Accept the call. Audio streaming is not started yet.
-                await incomingCallResponder.TryAcceptAsync(notification, null, cancellationToken);
+                // Prepare media config before answer so Graph can route app-hosted media.
+                mediaCaptureNote = await mediaCaptureCoordinator.PrepareCaptureAsync(notification, cancellationToken);
+                await incomingCallResponder.TryAcceptAsync(notification, mediaCaptureNote, cancellationToken);
             }
             else if (IsEstablished(notification.CallState))
             {
-                // Step 2: Call is established — now start audio streaming/capture.
+                // Keep the existing session (or lazily recover one) after the call is established.
                 mediaCaptureNote = await mediaCaptureCoordinator.PrepareCaptureAsync(notification, cancellationToken);
             }
             else if (IsTerminated(notification.CallState))

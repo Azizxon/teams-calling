@@ -165,16 +165,47 @@ public sealed class GraphIncomingCallResponder : IIncomingCallResponder
             acceptedModalities = new[] { "audio" };
         }
 
-        // Always accept with serviceHostedMediaConfig. Audio capture is started separately
-        // once the call transitions to the established state.
+        var mediaConfigToSend = ServiceHostedMediaConfig;
+        var parsedMediaConfiguration = TryParseJsonObject(mediaConfiguration);
+        if (parsedMediaConfiguration.HasValue)
+        {
+            mediaConfigToSend = parsedMediaConfiguration.Value;
+        }
+        else if (options.EnableWindowsMediaCapture && OperatingSystem.IsWindows())
+        {
+            logger.LogWarning(
+                "Windows media capture is enabled but app-hosted media configuration is missing/invalid for CallId={CallId}; " +
+                "falling back to serviceHostedMediaConfig and no raw audio frames will be delivered.",
+                notification.CallId);
+        }
+
         payload = new
         {
             callbackUri,
             acceptedModalities,
-            mediaConfig = ServiceHostedMediaConfig,
+            mediaConfig = mediaConfigToSend,
         };
 
         return true;
+    }
+
+    private static JsonElement? TryParseJsonObject(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+            return null;
+
+        try
+        {
+            using var doc = JsonDocument.Parse(value);
+            if (doc.RootElement.ValueKind != JsonValueKind.Object)
+                return null;
+
+            return doc.RootElement.Clone();
+        }
+        catch
+        {
+            return null;
+        }
     }
 
     private string BuildCallbackUri()
