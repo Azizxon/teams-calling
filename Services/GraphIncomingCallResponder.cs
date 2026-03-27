@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.Extensions.Options;
 using teams_streaming_call.Configuration;
 using teams_streaming_call.Models;
@@ -79,6 +80,14 @@ public sealed class GraphIncomingCallResponder : IIncomingCallResponder
         }
 
         var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
+        if ((int)response.StatusCode == 400)
+        {
+            logger.LogWarning(
+                "Graph answer request returned 400 for CallId={CallId}. RequestPayload={Payload}",
+                callId,
+                requestJson);
+        }
+
         logger.LogWarning(
             "Failed to accept incoming call {CallId}. Status={StatusCode} Body={Body}",
             callId,
@@ -165,11 +174,21 @@ public sealed class GraphIncomingCallResponder : IIncomingCallResponder
             acceptedModalities = new[] { "audio" };
         }
 
-        var mediaConfigToSend = ServiceHostedMediaConfig;
+        object mediaConfigToSend = ServiceHostedMediaConfig;
         var parsedMediaConfiguration = TryParseJsonObject(mediaConfiguration);
         if (parsedMediaConfiguration.HasValue)
         {
-            mediaConfigToSend = parsedMediaConfiguration.Value;
+            if (TryBuildAppHostedMediaConfig(parsedMediaConfiguration.Value, out var appHostedMediaConfig))
+            {
+                mediaConfigToSend = appHostedMediaConfig;
+            }
+            else
+            {
+                logger.LogWarning(
+                    "Provided media configuration JSON is present but does not contain a valid app-hosted blob for CallId={CallId}; " +
+                    "falling back to serviceHostedMediaConfig.",
+                    notification.CallId);
+            }
         }
         else if (options.EnableWindowsMediaCapture && OperatingSystem.IsWindows())
         {
@@ -196,15 +215,50 @@ public sealed class GraphIncomingCallResponder : IIncomingCallResponder
         return true;
     }
 
-    private static string? TryGetMediaConfigType(JsonElement mediaConfig)
+    private static string? TryGetMediaConfigType(object mediaConfig)
     {
-        if (!mediaConfig.TryGetProperty("@odata.type", out var typeProperty) ||
-            typeProperty.ValueKind != JsonValueKind.String)
+        if (mediaConfig is JsonElement jsonElement)
         {
-            return null;
+            if (!jsonElement.TryGetProperty("@odata.type", out var typeProperty) ||
+                typeProperty.ValueKind != JsonValueKind.String)
+            {
+                return null;
+            }
+
+            return typeProperty.GetString();
         }
 
-        return typeProperty.GetString();
+        if (mediaConfig is JsonObject jsonObject)
+        {
+            return jsonObject["@odata.type"]?.GetValue<string>();
+        }
+
+        return null;
+    }
+
+    private static bool TryBuildAppHostedMediaConfig(JsonElement mediaConfiguration, out object appHostedMediaConfig)
+    {
+        appHostedMediaConfig = null!;
+
+        if (!mediaConfiguration.TryGetProperty("blob", out var blobElement) ||
+            blobElement.ValueKind != JsonValueKind.String)
+        {
+            return false;
+        }
+
+        var blob = blobElement.GetString();
+        if (string.IsNullOrWhiteSpace(blob))
+        {
+            return false;
+        }
+
+        appHostedMediaConfig = new JsonObject
+        {
+            ["@odata.type"] = "#microsoft.graph.appHostedMediaConfig",
+            ["blob"] = blob,
+        };
+
+        return true;
     }
 
     private static JsonElement? TryParseJsonObject(string? value)
