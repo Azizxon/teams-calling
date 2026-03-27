@@ -34,16 +34,26 @@ public sealed class CallNotificationProcessor : ICallNotificationProcessor
         foreach (var notification in notifications)
         {
             var archivePath = await archiver.ArchiveAsync(notification.CallId ?? "unknown", notification.RawJson, cancellationToken);
-            var mediaCaptureNote = await mediaCaptureCoordinator.PrepareCaptureAsync(notification, cancellationToken);
+
+            string? mediaCaptureNote = null;
 
             if (IsIncoming(notification.CallState))
-                await incomingCallResponder.TryAcceptAsync(notification, mediaCaptureNote, cancellationToken);
+            {
+                // Step 1: Accept the call. Audio streaming is not started yet.
+                await incomingCallResponder.TryAcceptAsync(notification, null, cancellationToken);
+            }
+            else if (IsEstablished(notification.CallState))
+            {
+                // Step 2: Call is established — now start audio streaming/capture.
+                mediaCaptureNote = await mediaCaptureCoordinator.PrepareCaptureAsync(notification, cancellationToken);
+            }
+            else if (IsTerminated(notification.CallState))
+            {
+                await mediaCaptureCoordinator.StopCaptureAsync(notification.CallId ?? "unknown", cancellationToken);
+            }
 
             var snapshot = store.Upsert(notification, archivePath, mediaCaptureNote);
             snapshots.Add(snapshot);
-
-                if (IsTerminated(notification.CallState))
-                    await mediaCaptureCoordinator.StopCaptureAsync(notification.CallId ?? "unknown", cancellationToken);
 
             logger.LogInformation(
                 "Processed notification {NotificationId} for call {CallId} with state {State} and modalities [{Modalities}]",
@@ -164,6 +174,10 @@ public sealed class CallNotificationProcessor : ICallNotificationProcessor
     private static bool IsIncoming(string? state) =>
         state is not null &&
         state.Equals("incoming", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsEstablished(string? state) =>
+        state is not null &&
+        state.Equals("established", StringComparison.OrdinalIgnoreCase);
 
     private static bool IsTerminated(string? state) =>
         state is not null &&

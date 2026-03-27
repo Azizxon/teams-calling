@@ -36,3 +36,14 @@ obj/Debug/net8.0/refint/teams-streaming-call.dll
 # Project-generated runtime artifacts
 captures/
 ecs-cache/
+obj/teams-streaming-call.csproj.nuget.g.props
+obj/teams-streaming-call.csproj.nuget.g.props
+obj/teams-streaming-call.csproj.nuget.dgspec.json
+obj/project.nuget.cache
+obj/project.assets.json
+obj/project.nuget.cache
+obj/teams-streaming-call.csproj.nuget.dgspec.json
+obj/teams-streaming-call.csproj.nuget.g.props
+obj/teams-streaming-call.csproj.nuget.g.targets
+obj/Debug/net8.0/teams-streaming-call.assets.cache
+obj/Debug/net8.0/teams-streaming-call.csproj.FileListAbsolute.txt

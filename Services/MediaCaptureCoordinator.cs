@@ -47,10 +47,7 @@ public sealed class MediaCaptureCoordinator : IMediaCaptureCoordinator
             m.Equals("audio", StringComparison.OrdinalIgnoreCase) ||
             m.Equals("video", StringComparison.OrdinalIgnoreCase));
 
-        bool isIncoming = notification.CallState is not null &&
-            notification.CallState.Equals("incoming", StringComparison.OrdinalIgnoreCase);
-
-        if (!hasMedia && !isIncoming)
+        if (!hasMedia)
             return Task.FromResult<string?>(null);
 
         if (!_options.EnableWindowsMediaCapture)
