@@ -43,13 +43,8 @@ public sealed class MediaCaptureCoordinator : IMediaCaptureCoordinator
             return Task.FromResult<string?>(existingAudioSession.MediaConfiguration);
         }
 
-        bool hasMedia = notification.Modalities.Any(static m =>
-            m.Equals("audio", StringComparison.OrdinalIgnoreCase) ||
-            m.Equals("video", StringComparison.OrdinalIgnoreCase));
-
-        if (!hasMedia)
-            return Task.FromResult<string?>(null);
-
+        // PrepareCaptureAsync is called only when the call reaches the established state;
+        // modalities in that notification may be empty, so we don't gate on them here.
         if (!_options.EnableWindowsMediaCapture)
         {
             const string note = "Audio/video modalities detected. Real media sockets are disabled. " +

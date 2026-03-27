@@ -165,83 +165,15 @@ public sealed class GraphIncomingCallResponder : IIncomingCallResponder
             acceptedModalities = new[] { "audio" };
         }
 
-        JsonElement mediaConfigToSend;
-        var requireAppHosted = options.EnableWindowsMediaCapture && OperatingSystem.IsWindows();
-        var parsedMediaConfig = TryParseJsonObject(mediaConfiguration);
-        if (!parsedMediaConfig.HasValue)
-        {
-            mediaConfigToSend = ServiceHostedMediaConfig;
-            reason = requireAppHosted
-                ? "Media configuration is missing/invalid while Windows media capture is enabled. " +
-                  "Falling back to #microsoft.graph.serviceHostedMediaConfig so the call can be answered."
-                : "Media configuration is missing/invalid; using " +
-                  "#microsoft.graph.serviceHostedMediaConfig in signaling-only mode.";
-        }
-        else if (!TryReadODataType(parsedMediaConfig.Value, out var oDataType))
-        {
-            mediaConfigToSend = ServiceHostedMediaConfig;
-            reason = requireAppHosted
-                ? "Media configuration JSON does not include @odata.type while Windows media capture is enabled. " +
-                  "Falling back to #microsoft.graph.serviceHostedMediaConfig so the call can be answered."
-                : "Media configuration JSON does not include @odata.type; using " +
-                  "#microsoft.graph.serviceHostedMediaConfig in signaling-only mode.";
-        }
-        else if (oDataType.Equals("#microsoft.graph.appHostedMediaConfig", StringComparison.OrdinalIgnoreCase))
-        {
-            mediaConfigToSend = parsedMediaConfig.Value;
-            reason = string.Empty;
-        }
-        else if (oDataType.Equals("#microsoft.graph.serviceHostedMediaConfig", StringComparison.OrdinalIgnoreCase))
-        {
-            mediaConfigToSend = parsedMediaConfig.Value;
-            reason = requireAppHosted
-                ? "Received #microsoft.graph.serviceHostedMediaConfig while Windows media capture is enabled. " +
-                  "Proceeding so the call can be answered, but app-hosted capture may not start."
-                : string.Empty;
-        }
-        else
-        {
-            mediaConfigToSend = ServiceHostedMediaConfig;
-            reason = requireAppHosted
-                ? $"Media configuration @odata.type '{oDataType}' is unsupported while Windows media capture is enabled. " +
-                  "Falling back to #microsoft.graph.serviceHostedMediaConfig so the call can be answered."
-                : $"Media configuration @odata.type '{oDataType}' is unsupported; using " +
-                  "#microsoft.graph.serviceHostedMediaConfig in signaling-only mode.";
-        }
-
-        if (!string.IsNullOrWhiteSpace(reason))
-        {
-            logger.LogWarning("{Reason} CallId={CallId}", reason, notification.CallId);
-        }
-
+        // Always accept with serviceHostedMediaConfig. Audio capture is started separately
+        // once the call transitions to the established state.
         payload = new
         {
             callbackUri,
             acceptedModalities,
-            mediaConfig = mediaConfigToSend,
+            mediaConfig = ServiceHostedMediaConfig,
         };
 
-        reason = string.Empty;
-        return true;
-    }
-
-    private static bool TryReadODataType(JsonElement mediaConfig, out string oDataType)
-    {
-        oDataType = string.Empty;
-
-        if (!mediaConfig.TryGetProperty("@odata.type", out var typeElement) ||
-            typeElement.ValueKind != JsonValueKind.String)
-        {
-            return false;
-        }
-
-        var value = typeElement.GetString();
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        oDataType = value;
         return true;
     }
 
@@ -266,24 +198,5 @@ public sealed class GraphIncomingCallResponder : IIncomingCallResponder
         return !string.IsNullOrWhiteSpace(notification.CallId) &&
             notification.CallState is not null &&
             notification.CallState.Equals("incoming", StringComparison.OrdinalIgnoreCase);
-    }
-
-    private static JsonElement? TryParseJsonObject(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-            return null;
-
-        try
-        {
-            using var doc = JsonDocument.Parse(value);
-            if (doc.RootElement.ValueKind != JsonValueKind.Object)
-                return null;
-
-            return doc.RootElement.Clone();
-        }
-        catch
-        {
-            return null;
-        }
     }
 }
