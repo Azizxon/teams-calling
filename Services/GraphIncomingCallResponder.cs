@@ -186,7 +186,25 @@ public sealed class GraphIncomingCallResponder : IIncomingCallResponder
             mediaConfig = mediaConfigToSend,
         };
 
+        var mediaType = TryGetMediaConfigType(mediaConfigToSend) ?? "unknown";
+        logger.LogInformation(
+            "Answer payload prepared for CallId={CallId}. acceptedModalities=[{Modalities}] mediaConfigType={MediaType}",
+            notification.CallId,
+            string.Join(",", acceptedModalities),
+            mediaType);
+
         return true;
+    }
+
+    private static string? TryGetMediaConfigType(JsonElement mediaConfig)
+    {
+        if (!mediaConfig.TryGetProperty("@odata.type", out var typeProperty) ||
+            typeProperty.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        return typeProperty.GetString();
     }
 
     private static JsonElement? TryParseJsonObject(string? value)

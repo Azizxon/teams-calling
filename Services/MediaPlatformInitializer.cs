@@ -52,6 +52,12 @@ internal sealed class MediaPlatformInitializer : IHostedService
     {
         try
         {
+            if (string.IsNullOrWhiteSpace(_options.CertificateThumbprint))
+            {
+                _logger.LogWarning(
+                    "TeamsCallBot:CertificateThumbprint is empty. Media platform may initialize incorrectly and fail to receive audio frames.");
+            }
+
             var publicIp = ResolvePublicIpAddress();
 
             MediaPlatform.Initialize(new MediaPlatformSettings
@@ -68,10 +74,12 @@ internal sealed class MediaPlatformInitializer : IHostedService
             });
 
             _logger.LogInformation(
-                "Media platform initialized. ServiceFqdn={Fqdn}, PublicIP={IP}, PublicPort={Port}",
+                "Media platform initialized. ServiceFqdn={Fqdn}, PublicIP={IP}, PublicPort={PublicPort}, InternalPort={InternalPort}, CertificateConfigured={CertConfigured}",
                 _options.MediaServiceFqdn,
                 publicIp,
-                _options.InstancePublicPort);
+                _options.InstancePublicPort,
+                _options.InstanceInternalPort,
+                !string.IsNullOrWhiteSpace(_options.CertificateThumbprint));
         }
         catch (Exception ex)
         {

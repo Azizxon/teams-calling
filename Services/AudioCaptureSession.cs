@@ -14,6 +14,10 @@ internal sealed class AudioCaptureSession : IAsyncDisposable
 {
     private readonly AudioSocket _audioSocket;
     private readonly ILogger _logger;
+    private readonly string _callId;
+    private readonly PeriodicTimer _firstFrameWatchdog = new(TimeSpan.FromSeconds(10));
+    private readonly CancellationTokenSource _watchdogCts = new();
+    private long _frameCount;
     private bool _disposed;
 
     /// <summary>
@@ -24,6 +28,7 @@ internal sealed class AudioCaptureSession : IAsyncDisposable
     public AudioCaptureSession(string callId, string captureRoot, ILogger logger)
     {
         _logger = logger;
+        _callId = callId;
 
         var settings = new AudioSocketSettings
         {
@@ -45,6 +50,8 @@ internal sealed class AudioCaptureSession : IAsyncDisposable
         _logger.LogInformation(
             "Audio capture session initialized for CallId={CallId}. WAV persistence is disabled; frames will be logged only.",
             callId);
+
+        _ = WatchForMissingFirstFrameAsync();
     }
 
     // ── Audio event ─────────────────────────────────────────────────────────────
@@ -53,6 +60,12 @@ internal sealed class AudioCaptureSession : IAsyncDisposable
     {
         try
         {
+            var frameNumber = Interlocked.Increment(ref _frameCount);
+            if (frameNumber == 1)
+            {
+                _logger.LogInformation("First audio frame received for CallId={CallId}", _callId);
+            }
+
             _logger.LogInformation(
                 "Received audio frame for call: {Length} bytes, timestamp {Timestamp}",
                  e.Buffer.Length, e.Buffer.Timestamp);
@@ -76,6 +89,26 @@ internal sealed class AudioCaptureSession : IAsyncDisposable
         }
     }
 
+    private async Task WatchForMissingFirstFrameAsync()
+    {
+        try
+        {
+            await _firstFrameWatchdog.WaitForNextTickAsync(_watchdogCts.Token).ConfigureAwait(false);
+
+            if (Interlocked.Read(ref _frameCount) == 0)
+            {
+                _logger.LogWarning(
+                    "No audio frames received within 10 seconds for CallId={CallId}. " +
+                    "Likely causes: answer used serviceHostedMediaConfig, media endpoint reachability/firewall, or certificate/media platform mismatch.",
+                    _callId);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Normal on dispose.
+        }
+    }
+
     // ── Lifecycle ────────────────────────────────────────────────────────────────
 
     public async ValueTask DisposeAsync()
@@ -85,6 +118,10 @@ internal sealed class AudioCaptureSession : IAsyncDisposable
 
         // Unsubscribe so no more frames arrive.
         _audioSocket.AudioMediaReceived -= OnAudioMediaReceived;
+
+        _watchdogCts.Cancel();
+        _firstFrameWatchdog.Dispose();
+        _watchdogCts.Dispose();
 
         _audioSocket.Dispose();
         await Task.CompletedTask;
