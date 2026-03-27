@@ -5,9 +5,10 @@ namespace teams_streaming_call.Services;
 public interface IMediaCaptureCoordinator
 {
     /// <summary>
-    /// Prepares audio capture for the given call notification.
+    /// Prepares audio capture for the given call notification after the call signaling flow
+    /// has already been established.
     /// On Windows with media capture enabled, creates an <see cref="AudioCaptureSession"/>
-    /// and returns the serialized <c>MediaConfiguration</c> to pass back to Graph.
+    /// and returns the serialized <c>MediaConfiguration</c> for diagnostics or later use.
     /// Returns <c>null</c> if the notification has no audio/video modalities.
     /// </summary>
     Task<string?> PrepareCaptureAsync(CallNotificationRecord notification, CancellationToken cancellationToken);

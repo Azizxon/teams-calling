@@ -15,6 +15,7 @@ builder.Services.AddSingleton<ICallSessionStore, InMemoryCallSessionStore>();
 builder.Services.AddSingleton<ICallNotificationArchiver, FileCallNotificationArchiver>();
 builder.Services.AddSingleton<IMediaCaptureCoordinator, MediaCaptureCoordinator>();
 builder.Services.AddSingleton<ICallNotificationProcessor, CallNotificationProcessor>();
+builder.Services.AddHttpClient<IIncomingCallResponder, GraphIncomingCallResponder>();
 builder.Services.AddHostedService<MediaPlatformInitializer>();
 
 var app = builder.Build();

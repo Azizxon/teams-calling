@@ -1,26 +1,25 @@
 {
   "format": 1,
   "restore": {
-    "/Users/Azizkhon_Ishankhonov/Documents/EPAM/teams-streaming-call/teams-streaming-call.csproj": {}
+    "C:\\Users\\remotedebugger\\teams-calling\\teams-streaming-call.csproj": {}
   },
   "projects": {
-    "/Users/Azizkhon_Ishankhonov/Documents/EPAM/teams-streaming-call/teams-streaming-call.csproj": {
+    "C:\\Users\\remotedebugger\\teams-calling\\teams-streaming-call.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/Azizkhon_Ishankhonov/Documents/EPAM/teams-streaming-call/teams-streaming-call.csproj",
+        "projectUniqueName": "C:\\Users\\remotedebugger\\teams-calling\\teams-streaming-call.csproj",
         "projectName": "teams-streaming-call",
-        "projectPath": "/Users/Azizkhon_Ishankhonov/Documents/EPAM/teams-streaming-call/teams-streaming-call.csproj",
-        "packagesPath": "/Users/Azizkhon_Ishankhonov/.nuget/packages/",
-        "outputPath": "/Users/Azizkhon_Ishankhonov/Documents/EPAM/teams-streaming-call/obj/",
+        "projectPath": "C:\\Users\\remotedebugger\\teams-calling\\teams-streaming-call.csproj",
+        "packagesPath": "C:\\Users\\remotedebugger\\.nuget\\packages\\",
+        "outputPath": "C:\\Users\\remotedebugger\\teams-calling\\obj\\",
         "projectStyle": "PackageReference",
         "configFilePaths": [
-          "/Users/Azizkhon_Ishankhonov/.nuget/NuGet/NuGet.Config"
+          "C:\\Users\\remotedebugger\\AppData\\Roaming\\NuGet\\NuGet.Config"
         ],
         "originalTargetFrameworks": [
           "net8.0"
         ],
         "sources": {
-          "/usr/local/share/dotnet/library-packs": {},
           "https://api.nuget.org/v3/index.json": {}
         },
         "frameworks": {
@@ -39,7 +38,7 @@
           "auditLevel": "low",
           "auditMode": "direct"
         },
-        "SdkAnalysisLevel": "10.0.100"
+        "SdkAnalysisLevel": "10.0.200"
       },
       "frameworks": {
         "net8.0": {
@@ -48,6 +47,11 @@
             "Microsoft.Graph.Communications.Calls.Media": {
               "target": "Package",
               "version": "[1.2.0.15690, )"
+            },
+            "Microsoft.Skype.Bots.Media": {
+              "target": "Package",
+              "version": "[1.31.0.225-preview, )",
+              "generatePathProperty": true
             }
           },
           "imports": [
@@ -61,20 +65,6 @@
           ],
           "assetTargetFallback": true,
           "warn": true,
-          "downloadDependencies": [
-            {
-              "name": "Microsoft.AspNetCore.App.Ref",
-              "version": "[8.0.22, 8.0.22]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Host.osx-arm64",
-              "version": "[8.0.22, 8.0.22]"
-            },
-            {
-              "name": "Microsoft.NETCore.App.Ref",
-              "version": "[8.0.22, 8.0.22]"
-            }
-          ],
           "frameworkReferences": {
             "Microsoft.AspNetCore.App": {
               "privateAssets": "none"
@@ -83,7 +73,7 @@
               "privateAssets": "all"
             }
           },
-          "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/10.0.100/PortableRuntimeIdentifierGraph.json"
+          "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.201/PortableRuntimeIdentifierGraph.json"
         }
       }
     }

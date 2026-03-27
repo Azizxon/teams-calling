@@ -32,3 +32,7 @@ obj/Debug/net8.0/teams-streaming-call.dll
 obj/Debug/net8.0/teams-streaming-call.pdb
 obj/Debug/net8.0/ref/teams-streaming-call.dll
 obj/Debug/net8.0/refint/teams-streaming-call.dll
+
+# Project-generated runtime artifacts
+captures/
+ecs-cache/

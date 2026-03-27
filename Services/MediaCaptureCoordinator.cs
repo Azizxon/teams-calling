@@ -34,11 +34,23 @@ public sealed class MediaCaptureCoordinator : IMediaCaptureCoordinator
         CallNotificationRecord notification,
         CancellationToken cancellationToken)
     {
+        var callId = notification.CallId ?? "unknown";
+
+        if (OperatingSystem.IsWindows() &&
+            _sessions.TryGetValue(callId, out var existingSession) &&
+            existingSession is AudioCaptureSession existingAudioSession)
+        {
+            return Task.FromResult<string?>(existingAudioSession.MediaConfiguration);
+        }
+
         bool hasMedia = notification.Modalities.Any(static m =>
             m.Equals("audio", StringComparison.OrdinalIgnoreCase) ||
             m.Equals("video", StringComparison.OrdinalIgnoreCase));
 
-        if (!hasMedia)
+        bool isIncoming = notification.CallState is not null &&
+            notification.CallState.Equals("incoming", StringComparison.OrdinalIgnoreCase);
+
+        if (!hasMedia && !isIncoming)
             return Task.FromResult<string?>(null);
 
         if (!_options.EnableWindowsMediaCapture)
@@ -58,7 +70,7 @@ public sealed class MediaCaptureCoordinator : IMediaCaptureCoordinator
             return Task.FromResult<string?>(note);
         }
 
-        var mediaConfig = StartCaptureOnWindows(notification.CallId ?? "unknown");
+        var mediaConfig = StartCaptureOnWindows(callId);
         return Task.FromResult(mediaConfig);
     }
 

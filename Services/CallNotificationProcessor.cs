@@ -8,17 +8,20 @@ public sealed class CallNotificationProcessor : ICallNotificationProcessor
     private readonly ICallNotificationArchiver archiver;
     private readonly ICallSessionStore store;
     private readonly IMediaCaptureCoordinator mediaCaptureCoordinator;
+    private readonly IIncomingCallResponder incomingCallResponder;
     private readonly ILogger<CallNotificationProcessor> logger;
 
     public CallNotificationProcessor(
         ICallNotificationArchiver archiver,
         ICallSessionStore store,
         IMediaCaptureCoordinator mediaCaptureCoordinator,
+        IIncomingCallResponder incomingCallResponder,
         ILogger<CallNotificationProcessor> logger)
     {
         this.archiver = archiver;
         this.store = store;
         this.mediaCaptureCoordinator = mediaCaptureCoordinator;
+        this.incomingCallResponder = incomingCallResponder;
         this.logger = logger;
     }
 
@@ -32,6 +35,10 @@ public sealed class CallNotificationProcessor : ICallNotificationProcessor
         {
             var archivePath = await archiver.ArchiveAsync(notification.CallId ?? "unknown", notification.RawJson, cancellationToken);
             var mediaCaptureNote = await mediaCaptureCoordinator.PrepareCaptureAsync(notification, cancellationToken);
+
+            if (IsIncoming(notification.CallState))
+                await incomingCallResponder.TryAcceptAsync(notification, mediaCaptureNote, cancellationToken);
+
             var snapshot = store.Upsert(notification, archivePath, mediaCaptureNote);
             snapshots.Add(snapshot);
 
@@ -75,19 +82,21 @@ public sealed class CallNotificationProcessor : ICallNotificationProcessor
         var notificationId = ReadString(item, "id");
         var changeType = ReadString(item, "changeType");
         var resource = ReadString(item, "resource");
-        var tenantId = ReadString(item, "tenantId");
+        var topLevelTenantId = ReadString(item, "tenantId");
 
         JsonElement resourceData = default;
         var hasResourceData = item.ValueKind == JsonValueKind.Object &&
             item.TryGetProperty("resourceData", out resourceData) &&
             resourceData.ValueKind == JsonValueKind.Object;
 
+        var tenantId = topLevelTenantId ?? (hasResourceData ? ReadString(resourceData, "tenantId") : null);
+
         var callId = hasResourceData
             ? ReadString(resourceData, "id") ?? ExtractCallId(resource)
             : ExtractCallId(resource);
 
         var callState = hasResourceData
-            ? ReadString(resourceData, "state") ?? ReadNestedString(resourceData, "callChainId")
+            ? ReadString(resourceData, "state")
             : null;
 
         var modalities = hasResourceData
@@ -115,13 +124,6 @@ public sealed class CallNotificationProcessor : ICallNotificationProcessor
 
         var segments = resource.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         return segments.LastOrDefault();
-    }
-
-    private static string? ReadNestedString(JsonElement element, string propertyName)
-    {
-        return element.ValueKind == JsonValueKind.Object && element.TryGetProperty(propertyName, out var property)
-            ? property.ValueKind == JsonValueKind.String ? property.GetString() : property.ToString()
-            : null;
     }
 
     private static string? ReadString(JsonElement element, string propertyName)
@@ -159,8 +161,12 @@ public sealed class CallNotificationProcessor : ICallNotificationProcessor
             .ToArray();
     }
 
-        private static bool IsTerminated(string? state) =>
-                state is not null &&
-                (state.Equals("terminated", StringComparison.OrdinalIgnoreCase) ||
-                 state.Equals("disconnected", StringComparison.OrdinalIgnoreCase));
+    private static bool IsIncoming(string? state) =>
+        state is not null &&
+        state.Equals("incoming", StringComparison.OrdinalIgnoreCase);
+
+    private static bool IsTerminated(string? state) =>
+        state is not null &&
+        (state.Equals("terminated", StringComparison.OrdinalIgnoreCase) ||
+         state.Equals("disconnected", StringComparison.OrdinalIgnoreCase));
 }
