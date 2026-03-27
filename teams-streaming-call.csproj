@@ -9,6 +9,12 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.Graph.Communications.Calls.Media" Version="1.2.0.15690" />
+    <PackageReference Include="Microsoft.Skype.Bots.Media" Version="1.31.0.225-preview" GeneratePathProperty="true" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
+    <!-- Microsoft.Skype.Bots.Media keeps NativeMedia and related native binaries under src/net8.0. -->
+    <None Include="$(PkgMicrosoft_Skype_Bots_Media)src\net8.0\*.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>
