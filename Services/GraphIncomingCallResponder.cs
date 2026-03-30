@@ -147,11 +147,9 @@ public sealed class GraphIncomingCallResponder : IIncomingCallResponder
     };
 
     private static readonly JsonElement ServiceHostedMediaConfig =
-        JsonDocument.Parse("{" +
-            "\"@odata.type\":\"#microsoft.graph.serviceHostedMediaConfig\"" +
-        "}")
-        .RootElement
-        .Clone();
+        JsonDocument.Parse("{\"@odata.type\":\"#microsoft.graph.serviceHostedMediaConfig\"}")
+            .RootElement
+            .Clone();
 
     private bool TryBuildAnswerPayload(
         CallNotificationRecord notification,
@@ -252,11 +250,19 @@ public sealed class GraphIncomingCallResponder : IIncomingCallResponder
             return false;
         }
 
-        appHostedMediaConfig = new JsonObject
+        var jsonObject = new JsonObject
         {
             ["@odata.type"] = "#microsoft.graph.appHostedMediaConfig",
             ["blob"] = blob,
         };
+
+        if (mediaConfiguration.TryGetProperty("receiveUnmixedMeetingAudio", out var receiveUnmixedElement) &&
+            receiveUnmixedElement.ValueKind == JsonValueKind.True)
+        {
+            jsonObject["receiveUnmixedMeetingAudio"] = true;
+        }
+
+        appHostedMediaConfig = jsonObject;
 
         return true;
     }

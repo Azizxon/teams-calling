@@ -13,6 +13,12 @@ public sealed class TeamsCallBotOptions
 
     public string AadAppSecret { get; set; } = string.Empty;
 
+    /// <summary>
+    /// AAD tenant ID used as fallback when the SDK does not supply one.
+    /// Defaults to "organizations" for multi-tenant apps.
+    /// </summary>
+    public string TenantId { get; set; } = "organizations";
+
     [Required]
     public string ServiceCname { get; set; } = string.Empty;
 

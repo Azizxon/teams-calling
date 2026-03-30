@@ -58,14 +58,12 @@ internal sealed class MediaPlatformInitializer : IHostedService
                     "TeamsCallBot:CertificateThumbprint is empty. Media platform may initialize incorrectly and fail to receive audio frames.");
             }
 
-            var publicIp = ResolvePublicIpAddress();
-
             MediaPlatform.Initialize(new MediaPlatformSettings
             {
                 MediaPlatformInstanceSettings = new MediaPlatformInstanceSettings
                 {
+                    InstancePublicIPAddress = IPAddress.Any,
                     ServiceFqdn = _options.MediaServiceFqdn,
-                    InstancePublicIPAddress = publicIp,
                     InstancePublicPort = _options.InstancePublicPort,
                     InstanceInternalPort = _options.InstanceInternalPort,
                     CertificateThumbprint = _options.CertificateThumbprint,
@@ -76,7 +74,7 @@ internal sealed class MediaPlatformInitializer : IHostedService
             _logger.LogInformation(
                 "Media platform initialized. ServiceFqdn={Fqdn}, PublicIP={IP}, PublicPort={PublicPort}, InternalPort={InternalPort}, CertificateConfigured={CertConfigured}",
                 _options.MediaServiceFqdn,
-                publicIp,
+                IPAddress.Any,
                 _options.InstancePublicPort,
                 _options.InstanceInternalPort,
                 !string.IsNullOrWhiteSpace(_options.CertificateThumbprint));
@@ -85,43 +83,6 @@ internal sealed class MediaPlatformInitializer : IHostedService
         {
             _logger.LogError(ex, "Failed to initialize the media platform.");
         }
-    }
-
-    private IPAddress ResolvePublicIpAddress()
-    {
-        if (IPAddress.TryParse(_options.InstancePublicIpAddress, out var configuredIp))
-            return configuredIp;
-
-        var hostCandidates = new[]
-        {
-            _options.ServiceDnsName,
-            _options.MediaServiceFqdn,
-            _options.ServiceCname,
-        }
-        .Where(static host => !string.IsNullOrWhiteSpace(host))
-        .ToArray();
-
-        foreach (var host in hostCandidates)
-        {
-            try
-            {
-                var addresses = Dns.GetHostAddresses(host);
-                var ipv4 = addresses.FirstOrDefault(static ip => ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork);
-                if (ipv4 is not null)
-                {
-                    _logger.LogInformation("Resolved public media IP {IP} from host {Host}", ipv4, host);
-                    return ipv4;
-                }
-            }
-            catch
-            {
-                // Try next candidate.
-            }
-        }
-
-        throw new InvalidOperationException(
-            "Could not determine InstancePublicIPAddress. Set TeamsCallBot:InstancePublicIpAddress explicitly " +
-            "to the VM public IPv4 address.");
     }
 
     public Task StopAsync(CancellationToken cancellationToken)

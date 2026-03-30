@@ -43,7 +43,7 @@ public sealed class CallNotificationProcessor : ICallNotificationProcessor
                 mediaCaptureNote = await mediaCaptureCoordinator.PrepareCaptureAsync(notification, cancellationToken);
                 await incomingCallResponder.TryAcceptAsync(notification, mediaCaptureNote, cancellationToken);
             }
-            else if (IsEstablished(notification.CallState))
+            else if (IsEstablished(notification.CallState) || IsParticipantUpdate(notification.Resource))
             {
                 // Keep the existing session (or lazily recover one) after the call is established.
                 mediaCaptureNote = await mediaCaptureCoordinator.PrepareCaptureAsync(notification, cancellationToken);
@@ -134,6 +134,18 @@ public sealed class CallNotificationProcessor : ICallNotificationProcessor
         }
 
         var segments = resource.Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        // Resource paths can include nested nodes like /app/calls/{id}/participants.
+        // Prefer the segment right after "calls" so all call-scoped notifications
+        // are consistently correlated to the same call session.
+        for (var i = 0; i < segments.Length - 1; i++)
+        {
+            if (segments[i].Equals("calls", StringComparison.OrdinalIgnoreCase))
+            {
+                return segments[i + 1];
+            }
+        }
+
         return segments.LastOrDefault();
     }
 
@@ -184,4 +196,14 @@ public sealed class CallNotificationProcessor : ICallNotificationProcessor
         state is not null &&
         (state.Equals("terminated", StringComparison.OrdinalIgnoreCase) ||
          state.Equals("disconnected", StringComparison.OrdinalIgnoreCase));
+
+    private static bool IsParticipantUpdate(string? resource)
+    {
+        if (string.IsNullOrWhiteSpace(resource))
+        {
+            return false;
+        }
+
+        return resource.Contains("/participants", StringComparison.OrdinalIgnoreCase);
+    }
 }

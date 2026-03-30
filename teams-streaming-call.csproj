@@ -13,7 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Microsoft.Skype.Bots.Media keeps NativeMedia and related native binaries under src/net8.0. -->
+    <!-- NativeMedia.dll and related native binaries are required at runtime by
+         Microsoft.Graph.Communications.Calls.Media even when using the managed API only. -->
     <None Include="$(PkgMicrosoft_Skype_Bots_Media)src\net8.0\*.dll" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 
