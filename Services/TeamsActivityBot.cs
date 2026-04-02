@@ -10,10 +10,10 @@ namespace teams_streaming_call.Services;
 /// </summary>
 public sealed class TeamsActivityBot : TeamsActivityHandler
 {
-    private readonly BotService _botService;
+    private readonly BotCallService _botService;
     private readonly ILogger<TeamsActivityBot> _logger;
 
-    public TeamsActivityBot(BotService botService, ILogger<TeamsActivityBot> logger)
+    public TeamsActivityBot(BotCallService botService, ILogger<TeamsActivityBot> logger)
     {
         _botService = botService;
         _logger = logger;

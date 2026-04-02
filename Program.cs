@@ -18,14 +18,11 @@ builder.Services
 builder.Services.AddSingleton<IGraphLogger>(sp =>
     new GraphLogger(typeof(Program).Assembly.GetName().Name ?? "TeamsBot"));
 
-builder.Services.AddSingleton<ICallSessionStore, InMemoryCallSessionStore>();
-builder.Services.AddSingleton<ICallNotificationArchiver, FileCallNotificationArchiver>();
-
 // BotService owns ICommunicationsClient and all call/media lifecycle.
 // Register as both singleton (for direct injection into CallsController) and
 // as a hosted service so it starts/stops with the application.
-builder.Services.AddSingleton<BotService>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<BotService>());
+builder.Services.AddSingleton<BotCallService>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<BotCallService>());
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();

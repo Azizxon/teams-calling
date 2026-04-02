@@ -4,7 +4,7 @@ namespace teams_streaming_call.Services;
 
 /// <summary>
 /// Stub kept for interface compatibility. Call/media lifecycle is now fully
-/// managed by <see cref="BotService"/> via <see cref="ICommunicationsClient"/>.
+/// managed by <see cref="BotCallService"/> via <see cref="ICommunicationsClient"/>.
 /// </summary>
 public sealed class MediaCaptureCoordinator : IMediaCaptureCoordinator
 {

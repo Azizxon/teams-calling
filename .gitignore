@@ -1,6 +1,6 @@
-obj/*
-bin/*
-.vs/*
+obj/
+bin/
+.vs/
 *.user
 *.suo
 *.log
@@ -18,32 +18,8 @@ bin/*
 *.sln.docstates
 *.ncb
 *.sdf
-*.suo   
 .DS_Store
-obj/**/*
-bin/**/*
-obj/Debug/net8.0/rjsmcshtml.dswa.cache.json
-obj/Debug/net8.0/rjsmrazor.dswa.cache.json
-obj/Debug/net8.0/rpswa.dswa.cache.json
-obj/Debug/net8.0/teams-streaming-call.AssemblyInfo.cs
-obj/Debug/net8.0/teams-streaming-call.AssemblyInfoInputs.cache
-obj/Debug/net8.0/teams-streaming-call.csproj.FileListAbsolute.txt
-obj/Debug/net8.0/teams-streaming-call.dll
-obj/Debug/net8.0/teams-streaming-call.pdb
-obj/Debug/net8.0/ref/teams-streaming-call.dll
-obj/Debug/net8.0/refint/teams-streaming-call.dll
 
 # Project-generated runtime artifacts
 captures/
 ecs-cache/
-obj/teams-streaming-call.csproj.nuget.g.props
-obj/teams-streaming-call.csproj.nuget.g.props
-obj/teams-streaming-call.csproj.nuget.dgspec.json
-obj/project.nuget.cache
-obj/project.assets.json
-obj/project.nuget.cache
-obj/teams-streaming-call.csproj.nuget.dgspec.json
-obj/teams-streaming-call.csproj.nuget.g.props
-obj/teams-streaming-call.csproj.nuget.g.targets
-obj/Debug/net8.0/teams-streaming-call.assets.cache
-obj/Debug/net8.0/teams-streaming-call.csproj.FileListAbsolute.txt

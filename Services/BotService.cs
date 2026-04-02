@@ -4,12 +4,10 @@ using Microsoft.Extensions.Options;
 using Microsoft.Graph.Communications.Calls;
 using Microsoft.Graph.Communications.Calls.Media;
 using Microsoft.Graph.Communications.Client;
-using Microsoft.Graph.Communications.Common;
 using Microsoft.Graph.Communications.Resources;
 using Microsoft.Graph.Communications.Common.Telemetry;
 using Microsoft.Skype.Bots.Media;
 using teams_streaming_call.Configuration;
-using teams_streaming_call.Models;
 
 namespace teams_streaming_call.Services;
 
@@ -19,13 +17,11 @@ namespace teams_streaming_call.Services;
 /// Replaces <c>MediaPlatformInitializer</c>, <c>GraphIncomingCallResponder</c>, and
 /// <c>MediaCaptureCoordinator</c>.
 /// </summary>
-public sealed class BotService : IHostedService, IDisposable
+public sealed class BotCallService : IHostedService, IDisposable
 {
     private readonly TeamsCallBotOptions _options;
     private readonly IGraphLogger _graphLogger;
-    private readonly ILogger<BotService> _logger;
-    private readonly ICallNotificationArchiver _archiver;
-    private readonly ICallSessionStore _store;
+    private readonly ILogger<BotCallService> _logger;
 
     private readonly ConcurrentDictionary<string, AudioCaptureSession> _sessions = new();
     private ICommunicationsClient? _client;
@@ -34,18 +30,14 @@ public sealed class BotService : IHostedService, IDisposable
     public ICommunicationsClient Client =>
         _client ?? throw new InvalidOperationException("BotService has not been started.");
 
-    public BotService(
+    public BotCallService(
         IOptions<TeamsCallBotOptions> options,
         IGraphLogger graphLogger,
-        ILogger<BotService> logger,
-        ICallNotificationArchiver archiver,
-        ICallSessionStore store)
+        ILogger<BotCallService> logger)
     {
         _options = options.Value;
         _graphLogger = graphLogger;
         _logger = logger;
-        _archiver = archiver;
-        _store = store;
     }
 
     // ── IHostedService ────────────────────────────────────────────────────────
@@ -54,7 +46,7 @@ public sealed class BotService : IHostedService, IDisposable
     {
         _logger.LogInformation("Starting BotService...");
 
-        var name = typeof(BotService).Assembly.GetName().Name!;
+        var name = typeof(BotCallService).Assembly.GetName().Name!;
         var builder = new CommunicationsClientBuilder(name, _options.AadAppId, _graphLogger);
 
         var authProvider = new BotAuthenticationProvider(
@@ -164,13 +156,6 @@ public sealed class BotService : IHostedService, IDisposable
                     var session = new AudioCaptureSession(call, _logger);
                     _sessions[call.Id] = session;
                     _logger.LogInformation("Audio capture session started for CallId={CallId}", call.Id);
-
-                    _store.Upsert(
-                        new CallNotificationRecord(
-                            null, "updated", null, null,
-                            call.Id, call.Resource.State?.ToString(), Array.Empty<string>(),
-                            DateTimeOffset.UtcNow, string.Empty),
-                        null, "Audio capture session active");
                 }
                 catch (Exception ex)
                 {

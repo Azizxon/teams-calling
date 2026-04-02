@@ -7,20 +7,14 @@ namespace teams_streaming_call.Controllers;
 [Route("api/[controller]")]
 public sealed class CallsController : ControllerBase
 {
-    private readonly BotService _botService;
-    private readonly ICallSessionStore _store;
-    private readonly ICallNotificationArchiver _archiver;
+    private readonly BotCallService _botService;
     private readonly ILogger<CallsController> _logger;
 
     public CallsController(
-        BotService botService,
-        ICallSessionStore store,
-        ICallNotificationArchiver archiver,
+        BotCallService botService,
         ILogger<CallsController> logger)
     {
         _botService = botService;
-        _store = store;
-        _archiver = archiver;
         _logger = logger;
     }
 
@@ -37,9 +31,6 @@ public sealed class CallsController : ControllerBase
         using var reader = new System.IO.StreamReader(Request.Body, leaveOpen: true);
         var body = await reader.ReadToEndAsync(cancellationToken);
         Request.Body.Position = 0;
-
-        // Archive for debugging.
-        _ = _archiver.ArchiveAsync("notification", body, cancellationToken);
 
         // Deserialize via the SDK's serializer and dispatch to the client so it
         // can fire OnIncoming / OnUpdated on the call collection.
@@ -59,15 +50,5 @@ public sealed class CallsController : ControllerBase
         client.ProcessNotifications(requestUri, notifications, tenantId, scenarioId, requestId, null);
 
         return Accepted();
-    }
-
-    [HttpGet]
-    public IActionResult GetAll() => Ok(_store.GetAll());
-
-    [HttpGet("{callId}")]
-    public IActionResult GetById(string callId)
-    {
-        var snapshot = _store.Get(callId);
-        return snapshot is null ? NotFound() : Ok(snapshot);
     }
 }

@@ -1,7 +1,6 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Microsoft.Graph.Communications.Client.Authentication;
-using Microsoft.Graph.Communications.Common;
 using Microsoft.Graph.Communications.Common.Telemetry;
 
 namespace teams_streaming_call.Services;
