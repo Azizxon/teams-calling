@@ -8,6 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Bot.Builder.Integration.AspNet.Core" Version="4.23.1" />
     <PackageReference Include="Microsoft.Graph.Communications.Calls.Media" Version="1.2.0.15690" />
     <PackageReference Include="Microsoft.Skype.Bots.Media" Version="1.31.0.225-preview" GeneratePathProperty="true" />
   </ItemGroup>

@@ -1,3 +1,7 @@
+using Microsoft.Bot.Builder;
+using Microsoft.Bot.Builder.Integration.AspNet.Core;
+using Microsoft.Bot.Connector.Authentication;
+using Microsoft.Extensions.Options;
 using Microsoft.Graph.Communications.Common.Telemetry;
 using teams_streaming_call.Configuration;
 using teams_streaming_call.Services;
@@ -25,6 +29,25 @@ builder.Services.AddHostedService(sp => sp.GetRequiredService<BotService>());
 
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+
+// Bot Framework adapter and bot.
+// Reuse existing TeamsCallBot credentials (AadAppId / AadAppSecret / TenantId).
+builder.Services.AddSingleton<BotFrameworkAuthentication>(sp =>
+{
+    var opts = sp.GetRequiredService<IOptions<TeamsCallBotOptions>>().Value;
+    var config = new ConfigurationBuilder()
+        .AddInMemoryCollection(new Dictionary<string, string?>
+        {
+            ["MicrosoftAppType"]     = "SingleTenant",
+            ["MicrosoftAppId"]       = opts.AadAppId,
+            ["MicrosoftAppPassword"] = opts.AadAppSecret,
+            ["MicrosoftAppTenantId"] = opts.TenantId,
+        })
+        .Build();
+    return new ConfigurationBotFrameworkAuthentication(config);
+});
+builder.Services.AddSingleton<IBotFrameworkHttpAdapter, CloudAdapter>();
+builder.Services.AddTransient<IBot, TeamsActivityBot>();
 
 // Allow the controller to re-read the body for archiving.
 builder.Services.Configure<Microsoft.AspNetCore.Http.Features.FormOptions>(o => o.BufferBody = true);
