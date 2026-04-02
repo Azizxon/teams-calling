@@ -22,6 +22,7 @@ public sealed class BotCallService : IHostedService, IDisposable
     private readonly TeamsCallBotOptions _options;
     private readonly IGraphLogger _graphLogger;
     private readonly ILogger<BotCallService> _logger;
+    private readonly BotAuthenticationProvider _authProvider;
 
     private readonly ConcurrentDictionary<string, AudioCaptureSession> _sessions = new();
     private ICommunicationsClient? _client;
@@ -33,11 +34,13 @@ public sealed class BotCallService : IHostedService, IDisposable
     public BotCallService(
         IOptions<TeamsCallBotOptions> options,
         IGraphLogger graphLogger,
-        ILogger<BotCallService> logger)
+        ILogger<BotCallService> logger,
+        BotAuthenticationProvider authProvider)
     {
         _options = options.Value;
         _graphLogger = graphLogger;
         _logger = logger;
+        _authProvider = authProvider;
     }
 
     // ── IHostedService ────────────────────────────────────────────────────────
@@ -48,12 +51,6 @@ public sealed class BotCallService : IHostedService, IDisposable
 
         var name = typeof(BotCallService).Assembly.GetName().Name!;
         var builder = new CommunicationsClientBuilder(name, _options.AadAppId, _graphLogger);
-
-        var authProvider = new BotAuthenticationProvider(
-            _options.AadAppId,
-            _options.AadAppSecret,
-            _options.TenantId,
-            _graphLogger);
 
         // The notification URL is where Graph sends call-state change webhooks.
         // It must match the route registered in CallsController.
@@ -80,7 +77,7 @@ public sealed class BotCallService : IHostedService, IDisposable
             ApplicationId = _options.AadAppId,
         };
 
-        builder.SetAuthenticationProvider(authProvider);
+        builder.SetAuthenticationProvider(_authProvider);
         builder.SetNotificationUrl(notificationUrl);
         builder.SetMediaPlatformSettings(mediaPlatformSettings);
         builder.SetServiceBaseUrl(new Uri(_options.PlaceCallEndpointUrl));

@@ -10,19 +10,20 @@ namespace teams_streaming_call.Services;
 
 public sealed class GraphIncomingCallResponder : IIncomingCallResponder
 {
-    private const string GraphScope = "https://graph.microsoft.com/.default";
-
     private readonly HttpClient httpClient;
     private readonly TeamsCallBotOptions options;
+    private readonly BotAuthenticationProvider authProvider;
     private readonly ILogger<GraphIncomingCallResponder> logger;
 
     public GraphIncomingCallResponder(
         HttpClient httpClient,
         IOptions<TeamsCallBotOptions> options,
+        BotAuthenticationProvider authProvider,
         ILogger<GraphIncomingCallResponder> logger)
     {
         this.httpClient = httpClient;
         this.options = options.Value;
+        this.authProvider = authProvider;
         this.logger = logger;
     }
 
@@ -34,12 +35,6 @@ public sealed class GraphIncomingCallResponder : IIncomingCallResponder
         if (!ShouldAccept(notification))
             return false;
 
-        if (string.IsNullOrWhiteSpace(options.AadAppId) || string.IsNullOrWhiteSpace(options.AadAppSecret))
-        {
-            logger.LogWarning("Skipping incoming call acceptance because AAD app credentials are not configured.");
-            return false;
-        }
-
         var callId = notification.CallId;
         if (string.IsNullOrWhiteSpace(callId))
             return false;
@@ -48,7 +43,9 @@ public sealed class GraphIncomingCallResponder : IIncomingCallResponder
             ? "organizations"
             : notification.TenantId;
 
-        var token = await AcquireTokenAsync(tenantId, cancellationToken);
+        using var tokenRequest = new HttpRequestMessage();
+        await authProvider.AuthenticateOutboundRequestAsync(tokenRequest, tenantId);
+        var token = tokenRequest.Headers.Authorization?.Parameter;
         if (string.IsNullOrWhiteSpace(token))
             return false;
 
@@ -95,42 +92,6 @@ public sealed class GraphIncomingCallResponder : IIncomingCallResponder
             errorBody);
 
         return false;
-    }
-
-    private async Task<string?> AcquireTokenAsync(string tenantId, CancellationToken cancellationToken)
-    {
-        var tokenEndpoint = $"https://login.microsoftonline.com/{tenantId}/oauth2/v2.0/token";
-        var formBody = new Dictionary<string, string>
-        {
-            ["client_id"] = options.AadAppId,
-            ["client_secret"] = options.AadAppSecret,
-            ["grant_type"] = "client_credentials",
-            ["scope"] = GraphScope,
-        };
-
-        using var request = new HttpRequestMessage(HttpMethod.Post, tokenEndpoint)
-        {
-            Content = new FormUrlEncodedContent(formBody),
-        };
-
-        using var response = await httpClient.SendAsync(request, cancellationToken);
-        if (!response.IsSuccessStatusCode)
-        {
-            var errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            logger.LogWarning(
-                "Failed to acquire Graph token for tenant {TenantId}. Status={StatusCode} Body={Body}",
-                tenantId,
-                (int)response.StatusCode,
-                errorBody);
-            return null;
-        }
-
-        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-        using var json = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
-
-        return json.RootElement.TryGetProperty("access_token", out var tokenElement)
-            ? tokenElement.GetString()
-            : null;
     }
 
     private string BuildAnswerEndpoint(string callId)

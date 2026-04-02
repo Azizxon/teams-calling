@@ -9,7 +9,7 @@ namespace teams_streaming_call.Services;
 /// Authenticates outbound requests from <see cref="ICommunicationsClient"/> to the
 /// Microsoft Graph API using the OAuth 2.0 client-credentials flow.
 /// </summary>
-internal sealed class BotAuthenticationProvider : IRequestAuthenticationProvider
+public sealed class BotAuthenticationProvider : IRequestAuthenticationProvider
 {
     private readonly string _appId;
     private readonly string _appSecret;

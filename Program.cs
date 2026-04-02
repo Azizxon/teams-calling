@@ -18,6 +18,14 @@ builder.Services
 builder.Services.AddSingleton<IGraphLogger>(sp =>
     new GraphLogger(typeof(Program).Assembly.GetName().Name ?? "TeamsBot"));
 
+// Shared client-credentials token provider (cached, thread-safe).
+builder.Services.AddSingleton<BotAuthenticationProvider>(sp =>
+{
+    var opts = sp.GetRequiredService<IOptions<TeamsCallBotOptions>>().Value;
+    var graphLogger = sp.GetRequiredService<IGraphLogger>();
+    return new BotAuthenticationProvider(opts.AadAppId, opts.AadAppSecret, opts.TenantId, graphLogger);
+});
+
 // BotService owns ICommunicationsClient and all call/media lifecycle.
 // Register as both singleton (for direct injection into CallsController) and
 // as a hosted service so it starts/stops with the application.
