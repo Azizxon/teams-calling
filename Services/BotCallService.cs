@@ -8,6 +8,11 @@ using Microsoft.Graph.Communications.Resources;
 using Microsoft.Graph.Communications.Common.Telemetry;
 using Microsoft.Skype.Bots.Media;
 using teams_streaming_call.Configuration;
+using Microsoft.Graph.Models;
+using Microsoft.Graph.Contracts;
+using System.Runtime.Serialization.Json;
+using System.Text;
+using System.Text.RegularExpressions;
 
 namespace teams_streaming_call.Services;
 
@@ -174,12 +179,60 @@ public sealed class BotCallService : IHostedService, IDisposable
         }
     }
 
+    public async Task<ICall> JoinCallAsync(string callId, string joinUrl, string? displayName)
+    {
+        _ = callId;
+
+        // A tracking id for logging purposes. Helps identify this call in logs.
+        var scenarioId = Guid.NewGuid();
+
+        var (chatInfo, meetingInfo) = ParseJoinURL(joinUrl);
+        var organizerMeetingInfo = meetingInfo as OrganizerMeetingInfo
+            ?? throw new InvalidOperationException("Join URL did not produce OrganizerMeetingInfo.");
+        var tenantId = organizerMeetingInfo.Organizer.GetPrimaryIdentity().GetTenantId();
+        var mediaSession = CreateMediaSession(scenarioId);
+
+        var joinParams = new JoinMeetingParameters(chatInfo, meetingInfo, mediaSession)
+        {
+            TenantId = tenantId,
+        };
+
+        if (!string.IsNullOrWhiteSpace(displayName))
+        {
+            // Teams client does not allow changing of ones own display name.
+            // If display name is specified, we join as anonymous (guest) user
+            // with the specified display name.  This will put bot into lobby
+            // unless lobby bypass is disabled.
+            joinParams.GuestIdentity = new Identity
+            {
+                Id = Guid.NewGuid().ToString(),
+                DisplayName = displayName,
+            };
+        }
+
+        var statefulCall = await _client.Calls().AddAsync(joinParams, scenarioId).ConfigureAwait(false);
+        statefulCall.GraphLogger.Info($"Call creation complete: {statefulCall.Id}");
+        return statefulCall;
+    }
+
     // ── Media session factory ─────────────────────────────────────────────────
 
     private ILocalMediaSession CreateMediaSession(ICall call)
     {
         var mediaSessionId = Guid.TryParse(call.Id, out var id) ? id : Guid.NewGuid();
 
+        return CreateMediaSessionCore(mediaSessionId);
+    }
+
+    private ILocalMediaSession CreateMediaSession(Guid callId)
+    {
+        var mediaSessionId = callId != Guid.Empty ? callId : Guid.NewGuid();
+
+        return CreateMediaSessionCore(mediaSessionId);
+    }
+
+    private ILocalMediaSession CreateMediaSessionCore(Guid mediaSessionId)
+    {
         return _client!.CreateMediaSession(
             new AudioSocketSettings
             {
@@ -191,5 +244,63 @@ public sealed class BotCallService : IHostedService, IDisposable
                 StreamDirections = StreamDirection.Inactive,
             },
             mediaSessionId: mediaSessionId);
+    }
+
+    /// <summary>
+    /// Parse Join URL into its components.
+    /// </summary>
+    /// <param name="joinURL">Join URL from Team's meeting body.</param>
+    /// <returns>Parsed data.</returns>
+    /// <exception cref="ArgumentException">Join URL cannot be null or empty: {joinURL} - joinURL</exception>
+    /// <exception cref="ArgumentException">Join URL cannot be parsed: {joinURL} - joinURL</exception>
+    /// <exception cref="ArgumentException">Join URL is invalid: missing Tid - joinURL</exception>
+    private (ChatInfo, Microsoft.Graph.Models.MeetingInfo) ParseJoinURL(string joinURL)
+    {
+        if (string.IsNullOrEmpty(joinURL))
+        {
+            throw new ArgumentException($"Join URL cannot be null or empty: {joinURL}", nameof(joinURL));
+        }
+
+        var decodedURL = WebUtility.UrlDecode(joinURL);
+
+        //// URL being needs to be in this format.
+        //// https://teams.microsoft.com/l/meetup-join/19:cd9ce3da56624fe69c9d7cd026f9126d@thread.skype/1509579179399?context={"Tid":"72f988bf-86f1-41af-91ab-2d7cd011db47","Oid":"550fae72-d251-43ec-868c-373732c2704f","MessageId":"1536978844957"}
+
+        var regex = new Regex("https://teams\\.microsoft\\.com.*/(?<thread>[^/]+)/(?<message>[^/]+)\\?context=(?<context>{.*})");
+        var match = regex.Match(decodedURL);
+        if (!match.Success)
+        {
+            throw new ArgumentException($"Join URL cannot be parsed: {joinURL}", nameof(joinURL));
+        }
+
+        using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(match.Groups["context"].Value)))
+        {
+            var contextObject = new DataContractJsonSerializer(typeof(Meeting)).ReadObject(stream);
+            var ctxt = contextObject as Meeting
+                ?? throw new ArgumentException("Join URL context is invalid.", nameof(joinURL));
+
+            if (string.IsNullOrEmpty(ctxt.Tid))
+            {
+                throw new ArgumentException("Join URL is invalid: missing Tid", nameof(joinURL));
+            }
+
+            var chatInfo = new ChatInfo
+            {
+                ThreadId = match.Groups["thread"].Value,
+                MessageId = match.Groups["message"].Value,
+                ReplyChainMessageId = ctxt.MessageId,
+            };
+
+            var meetingInfo = new OrganizerMeetingInfo
+            {
+                Organizer = new IdentitySet
+                {
+                    User = new Identity { Id = ctxt.Oid },
+                },
+            };
+            meetingInfo.Organizer.User.SetTenantId(ctxt.Tid);
+
+            return (chatInfo, meetingInfo);
+        }
     }
 }

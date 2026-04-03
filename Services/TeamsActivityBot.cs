@@ -26,21 +26,23 @@ public sealed class TeamsActivityBot : TeamsActivityHandler
         await turnContext.SendActivityAsync(MessageFactory.Text(replyText), cancellationToken);
     }
 
-    protected override Task OnTeamsMeetingStartAsync(
+    protected override async Task OnTeamsMeetingStartAsync(
         MeetingStartEventDetails meeting,
         ITurnContext<IEventActivity> turnContext,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Meeting started: {MeetingId}", meeting.Id);
-        return Task.CompletedTask;
+        var callId = meeting.Id;
+        var joinUrl = meeting.JoinUrl.AbsoluteUri;
+        var displayName = meeting.Title;
+        await _botService.JoinCallAsync(callId, joinUrl, displayName).ConfigureAwait(false);
     }
 
-    protected override Task OnTeamsMeetingEndAsync(
+    protected override async Task OnTeamsMeetingEndAsync(
         MeetingEndEventDetails meeting,
         ITurnContext<IEventActivity> turnContext,
         CancellationToken cancellationToken)
     {
         _logger.LogInformation("Meeting ended: {MeetingId}", meeting.Id);
-        return Task.CompletedTask;
     }
 }
